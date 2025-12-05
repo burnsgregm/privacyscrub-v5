@@ -1,0 +1,27 @@
+# --- Python & Environment ---
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv/
+venv/
+*.log
+
+# --- Terraform (Critical: Do not commit state) ---
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# --- Large Model Files (Too big for GitHub, download via script instead) ---
+model_cache/
+services/*/model_cache/
+*.pt
+*.pth
+*.onnx
+
+# --- OS & IDE ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

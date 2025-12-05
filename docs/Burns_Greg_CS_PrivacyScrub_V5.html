@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PrivacyScrub V5 – GPU Video Anonymization Pipeline | Greg Burns</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #111827;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --border-subtle: #1f2937;
+      --code-bg: #020617;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 60%, #020617 100%);
+      color: var(--text-main);
+      line-height: 1.6;
+    }
+
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 16px 64px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.12);
+      border: 1px solid rgba(34, 197, 182, 0.35);
+      color: #a5f3fc;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .pill span {
+      font-weight: 600;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin: 16px 0 8px;
+      letter-spacing: -0.03em;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .hero-meta span {
+      padding-right: 16px;
+      border-right: 1px solid #1f2937;
+    }
+
+    .hero-meta span:last-child {
+      border-right: none;
+      padding-right: 0;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr);
+      gap: 24px;
+      align-items: start;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .hero-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .hero-card {
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.06), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.06), transparent 55%),
+                  var(--card);
+      border-radius: 16px;
+      padding: 18px 18px 16px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+    }
+
+    .hero-card h2 {
+      font-size: 16px;
+      margin: 0 0 8px;
+    }
+
+    .hero-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0 0 6px;
+    }
+
+    .hero-card ul {
+      margin: 6px 0 0 18px;
+      padding: 0;
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    .hero-card li {
+      margin-bottom: 2px;
+    }
+
+    .hero-visual {
+      background: radial-gradient(circle at top, rgba(56, 189, 248, 0.08), transparent 60%),
+                  var(--card);
+      border-radius: 16px;
+      padding: 12px 12px 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+    .hero-visual-thumb {
+      background: #020617;
+      border-radius: 10px;
+      padding: 8px;
+      border: 1px solid #1f2937;
+      overflow: hidden;
+    }
+
+    .hero-visual-thumb img {
+      display: block;
+      width: 100%;
+      border-radius: 6px;
+    }
+
+    .hero-visual-caption {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .section {
+      margin-bottom: 32px;
+      padding: 20px 18px 18px;
+      border-radius: 14px;
+      background: linear-gradient(to bottom right, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.98));
+      border: 1px solid var(--border-subtle);
+    }
+
+    .section h2 {
+      font-size: 17px;
+      margin-top: 0;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .section h3 {
+      font-size: 14px;
+      margin-bottom: 6px;
+      margin-top: 14px;
+    }
+
+    .section p {
+      font-size: 13px;
+      margin: 0 0 8px;
+      color: var(--text-main);
+    }
+
+    .section small {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .section ul {
+      margin: 4px 0 8px 18px;
+      padding: 0;
+      font-size: 13px;
+    }
+
+    .section li {
+      margin-bottom: 4px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .two-col {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 4px 0 0;
+    }
+
+    .pill-list span {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      color: var(--text-muted);
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 1), rgba(15, 23, 42, 0.96));
+    }
+
+    .diagram-wrapper {
+      margin-top: 8px;
+      padding: 10px;
+      border-radius: 10px;
+      background: var(--code-bg);
+      border: 1px solid #1e293b;
+    }
+
+    .diagram-wrapper img {
+      display: block;
+      width: 100%;
+      border-radius: 6px;
+    }
+
+    .diagram-caption {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .link-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    .link-list a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    .link-list a:hover {
+      border-bottom-color: var(--accent);
+    }
+
+    a.inline-link {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.4);
+    }
+
+    a.inline-link:hover {
+      border-bottom-color: var(--accent);
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      background: var(--code-bg);
+      padding: 1px 4px;
+      border-radius: 4px;
+      border: 1px solid #1f2937;
+    }
+
+    .tagline-quote {
+      font-size: 13px;
+      color: var(--text-muted);
+      border-left: 3px solid rgba(148, 163, 184, 0.7);
+      padding-left: 10px;
+      margin: 8px 0 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- HERO -->
+    <div class="pill">
+      <span>PrivacyScrub V5</span> 
+      <span>GPU Video Anonymization Pipeline</span>
+    </div>
+
+    <h1>PrivacyScrub V5 – End-to-End Video Anonymization for Faces and License Plates</h1>
+    <div class="subtitle">
+      A production-style, GPU-accelerated service that detects, tracks, and anonymizes faces and license plates across long-form video using YOLOv8, re-identification, and chunked processing.
+    </div>
+
+    <div class="hero-meta">
+      <span><strong>Role:</strong> Systems Architect · ML Engineer · MLOps</span>
+      <span><strong>Stack:</strong> Python, FastAPI, Streamlit, YOLOv8-X, DeepSORT/Re-ID, OpenCV, FFmpeg, GCP (Cloud Run, Cloud Tasks / Pub/Sub, Firestore, GCS), Terraform</span>
+      <span><strong>Links:</strong> <a href="https://github.com/burnsgregm/privacyscrub-v5" target="_blank" class="inline-link">GitHub</a> · <a href="https://privacyscrub.streamlit.app/" target="_blank" class="inline-link">Live Demo</a></span>
+    </div>
+
+    <div class="hero-grid">
+      <div class="hero-card">
+        <h2>Project in One Sentence</h2>
+        <p>PrivacyScrub V5 is a cloud-native video anonymization service that ingests user-uploaded footage, detects and tracks sensitive entities, and emits a redacted, share-safe video asset suitable for compliance-sensitive environments.</p>
+        <p><strong>Business problem:</strong></p>
+        <ul>
+          <li>Teams want to use screen recordings, dashcam clips, and workplace videos for analysis and training, but privacy obligations prevent sharing raw footage.</li>
+        </ul>
+        <p><strong>V5 outcome:</strong></p>
+        <ul>
+          <li>Turned an experimental YOLO script from earlier versions into a resilient pipeline with job state, chunking, GPU workers, and CI/CD gating to prevent unsafe deployments.</li>
+        </ul>
+        <div class="tagline-quote">
+          “Upload a video, get back a shareable asset where all faces and plates are consistently anonymized, even across long clips and re-appearing people.”
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="hero-visual-thumb">
+          <a href="Burns_Greg_CS_PrivacyScrub_V5_screen.png" target="_blank">
+            <img src="Burns_Greg_CS_PrivacyScrub_V5_screen.png" alt="PrivacyScrub V5 Streamlit demo screenshot">
+          </a>
+        </div>
+        <div class="hero-visual-caption">
+          Streamlit demo used to drive the FastAPI backend, submit jobs, and inspect redacted results. This screenshot appears on the live portfolio and README.
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTEXT & OBJECTIVES -->
+    <section class="section">
+      <h2>1. Context and Objectives</h2>
+      <p><strong>Use case:</strong> Enable analysts, engineers, and content creators to safely share or store video that originally contained PII (faces, license plates, sensitive regions) without manually editing every frame.</p>
+      <p><strong>Constraints I designed for:</strong></p>
+      <ul>
+        <li>Handle multi-minute videos without timeouts by splitting into chunks and stitching at the end.</li>
+        <li>Support GPU acceleration for heavy detection workloads, but keep the control plane lightweight.</li>
+        <li>Guarantee idempotent job handling so repeated uploads or retries do not corrupt state.</li>
+        <li>Make the anonymization defaults conservative enough for privacy, but configurable for power users.</li>
+      </ul>
+      <p><strong>Primary objectives for V5:</strong></p>
+      <ul>
+        <li>Upgrade from “single-shot YOLO pass” to a full <em>detection + tracking + re-identification</em> pipeline over time.</li>
+        <li>Introduce clear job lifecycle states (QUEUED, CHUNKING, PROCESSING, STITCHING, COMPLETED, FAILED).</li>
+        <li>Guard changes with SRS+TDD assets and shift-left CI checks so regressions are caught before deploy.</li>
+      </ul>
+    </section>
+
+    <!-- SOLUTION OVERVIEW -->
+    <section class="section">
+      <h2>2. Solution Overview (V5)</h2>
+      <div class="two-col">
+        <div>
+          <h3>2.1 End-to-End Flow</h3>
+          <p>The V5 system is a Cloud Run–based microservice architecture with a Streamlit front end, FastAPI gateway, background workers, and a persistence layer on GCS and Firestore.</p>
+          <ul>
+            <li><strong>Frontend:</strong> Streamlit app for file upload, job submission, status polling, and result download.</li>
+            <li><strong>API Gateway (FastAPI):</strong> Receives uploads, writes raw video to GCS, creates a job record in Firestore, and enqueues work.</li>
+            <li><strong>Orchestrator Worker:</strong> Downloads the original, runs FFmpeg to split into manageable chunks, and dispatches per-chunk processing tasks.</li>
+            <li><strong>GPU Worker:</strong> Uses YOLOv8-X, face, and plate models plus DeepSORT/Re-ID to track identities across frames and apply consistent anonymization.</li>
+            <li><strong>Stitching:</strong> Once all chunks complete, the orchestrator concatenates them, strips metadata, writes the final redacted video, and marks the job as COMPLETED.</li>
+          </ul>
+
+          <h3>2.2 Anonymization Operations</h3>
+          <p>At V5, the pipeline supports a wide set of anonymization features:</p>
+          <ul>
+            <li>Face and license plate detection using YOLOv8-family models.</li>
+            <li>DeepSORT-style tracker associates detections across frames, handling occlusions and re-entries.</li>
+            <li>Re-ID embeddings ensure a single person or vehicle receives consistent anonymization across the clip, even if they temporarily leave the frame.</li>
+            <li>Configurable anonymization policies by class (for example, blur faces, solid-mask plates, optional full-body masking).</li>
+            <li>Bounding box smoothing and temporal interpolation to avoid flicker at detection boundaries.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>2.3 Architecture Diagram</h3>
+          <p>The following architecture diagram is referenced in both the portfolio and GitHub README:</p>
+          <div class="diagram-wrapper">
+            <a href="Burns_Greg_CS_PrivacyScrub_V5.svg" target="_blank">
+              <img src="Burns_Greg_CS_PrivacyScrub_V5.svg" alt="PrivacyScrub V5 Architecture Diagram">
+            </a>
+            <div class="diagram-caption">
+              High-level architecture: Streamlit client, FastAPI gateway, task queue, orchestrator worker, GPU processing worker, GCS for raw/chunk/final assets, and Firestore for job state.
+            </div>
+          </div>
+          <h3>2.4 Key Technologies</h3>
+          <div class="pill-list">
+            <span>YOLOv8-X</span>
+            <span>DeepSORT / Re-ID</span>
+            <span>OpenCV / FFmpeg</span>
+            <span>FastAPI</span>
+            <span>Streamlit</span>
+            <span>Cloud Run</span>
+            <span>Cloud Tasks / Pub/Sub</span>
+            <span>Firestore</span>
+            <span>GCS</span>
+            <span>Terraform</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EVOLUTION -->
+    <section class="section">
+      <h2>3. Evolution from V1 to V5</h2>
+      <p>PrivacyScrub went through multiple iterations before landing on the current V5 architecture. I captured the evolution in DM, SRS, TDD, and implementation documents for each version.</p>
+      <ul>
+        <li><strong>V1:</strong> Single-script YOLO detector running locally, anonymizing faces and plates frame-by-frame with minimal error handling.</li>
+        <li><strong>V2:</strong> First API wrapper and simple UI; still largely synchronous, not robust to long videos or failures.</li>
+        <li><strong>V3:</strong> Split into a more explicit service plus job abstraction; early experiments with queues and state tracking.</li>
+        <li><strong>V4:</strong> Introduced stronger separation of roles (gateway vs worker), chunked processing for longer clips, and improved error handling.</li>
+        <li><strong>V5:</strong> Added GPU-first worker design, re-identification tracking, chunk-aware stitch pipeline, better idempotency, and Terraform-backed infrastructure definition.</li>
+      </ul>
+      <p>This case study focuses on the final V5 design, but the documentation set in the repository (<code>docs/DM - Personal - PrivacyScrub V5.pdf</code>, <code>SRS+TDD - Personal - PrivacyScrub V5.pdf</code>) captures the full progression.</p>
+    </section>
+
+    <!-- TECHNICAL HIGHLIGHTS -->
+    <section class="section">
+      <h2>4. Technical Highlights</h2>
+      <div class="two-col">
+        <div>
+          <h3>4.1 Detection, Tracking, and Re-Identification</h3>
+          <ul>
+            <li>YOLOv8-X as the primary detector for faces, plates, and optionally full-body regions.</li>
+            <li>DeepSORT-style tracker associates detections across frames, handling occlusions and re-entries.</li>
+            <li>Re-ID embeddings ensure a single person or vehicle receives consistent anonymization across the clip, even if they temporarily leave the frame.</li>
+            <li>Configurable anonymization policies by class (for example, blur faces, solid-mask plates, optional full-body masking).</li>
+          </ul>
+          <h3>4.2 Chunked Processing and Stitching</h3>
+          <ul>
+            <li>FFmpeg used to split large uploads into uniform segments to avoid timeouts and memory issues.</li>
+            <li>Each chunk is processed independently by the GPU worker; re-ID metadata can be carried forward when needed.</li>
+            <li>Final stitching step concatenates processed chunks, normalizes codecs, and strips Exif/metadata to avoid accidental leakage.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>4.3 Resilience, Idempotency, and State</h3>
+          <ul>
+            <li>Firestore keeps a per-job document with state, progress counters, timestamps, and error details.</li>
+            <li>Workers are written to be idempotent: reprocessing a chunk or job does not corrupt downstream state.</li>
+            <li>Jobs move through a defined lifecycle: QUEUED → CHUNKING → PROCESSING → STITCHING → COMPLETED or FAILED.</li>
+          </ul>
+          <h3>4.4 Infrastructure as Code and CI Guards</h3>
+          <ul>
+            <li>Terraform configuration for Cloud Run services, IAM, and core storage resources.</li>
+            <li>SRS+TDD assets formalize requirements and test coverage for each version, especially V5.</li>
+            <li>Automated tests validate detection, anonymization integrity, and basic video sanity before deploy.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="section">
+      <h2>5. Results and What I Shipped</h2>
+      <div class="two-col">
+        <div>
+          <h3>5.1 Outcomes</h3>
+          <ul>
+            <li>Delivered a working demo where non-technical users can upload video and download a redacted version without touching code.</li>
+            <li>Improved stability over earlier versions by isolating long-running work into background GPU workers with clear job state.</li>
+            <li>Produced reusable documentation (DM, SRS, TDD, and case study) that shows how I think about secure, privacy-first ML systems.</li>
+          </ul>
+
+          <h3>5.2 Lessons Learned</h3>
+          <ul>
+            <li>Chunked processing and tracking must be designed together; naïve chunk boundaries can break anonymization consistency.</li>
+            <li>Detectors that perform well on single images can still produce jitter across video; temporal smoothing is critical for a professional feel.</li>
+            <li>Having a clear job lifecycle model (and a real data store behind it) pays off quickly in debugging and user experience.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>5.3 My Responsibilities</h3>
+          <ul>
+            <li>Defined problem scope, threat model, and anonymization requirements.</li>
+            <li>Designed the V5 architecture and job lifecycle, including chunking and stitching strategy.</li>
+            <li>Implemented the FastAPI backend, worker logic, and integration with YOLOv8, tracking, and FFmpeg.</li>
+            <li>Built the Streamlit front end for demo, job submission, and download.</li>
+            <li>Created Terraform infrastructure definitions and SRS/TDD documentation.</li>
+            <li>Authored the portfolio case study and one-page recruiter summary.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- LINKS & ASSETS -->
+    <section class="section">
+      <h2>6. Links and Assets</h2>
+      <p>This project appears in the portfolio under <code>/PrivacyScrub_V5</code> with the following assets:</p>
+      <ul>
+        <li><strong>Case study (HTML):</strong> <a href="Burns_Greg_CS_PrivacyScrub_V5.html" class="inline-link">Burns_Greg_CS_PrivacyScrub_V5.html</a></li>
+        <li><strong>One-page recruiter summary (PDF):</strong> <a href="Burns_Greg_CS_1P_PrivacyScrub_V5.pdf" class="inline-link">Burns_Greg_CS_1P_PrivacyScrub_V5.pdf</a></li>
+        <li><strong>Architecture diagram:</strong> <a href="Burns_Greg_CS_PrivacyScrub_V5.svg" class="inline-link">Burns_Greg_CS_PrivacyScrub_V5.svg</a></li>
+        <li><strong>UI screenshot:</strong> <a href="Burns_Greg_CS_PrivacyScrub_V5_screen.png" class="inline-link">Burns_Greg_CS_PrivacyScrub_V5_screen.png</a></li>
+      </ul>
+      <div class="link-list">
+        <a href="https://github.com/burnsgregm/privacyscrub-v5" target="_blank">GitHub Repository</a>
+        <a href="https://privacyscrub.streamlit.app/" target="_blank">Live Streamlit Demo</a>
+      </div>
+      <p style="margin-top:10px;font-size:12px;color:var(--text-muted);">
+        Full design and engineering documentation (DM, SRS, TDD for V1–V5) is stored under <code>docs/</code> in the GitHub repository.
+      </p>
+    </section>
+
+  </div>
+</body>
+</html>
